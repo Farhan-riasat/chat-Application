@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chat Application</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.3/css/bootstrap.min.css" integrity="sha384-Zug+QiDoJOrZ5t4lssLdxGhVrurbmBWopoEl+M6BdEfwnCJZtKxi1KgxUyJq13dy" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body{
+            margin-top: 30px;
+
+            }
+
+        #messageArea{
+                display: none;
+            }
+
+        .col-md-4{
+         float: left;
+        width: 100%;
+            }
+
+        .col-md-8{
+            float: right;
+            background: #f8f9fa;
+            border-radius: 3px;
+            padding: 21px;
+            }
+            
+    </style>
+  </head>
+  <body>
+    <div class="container">
+        <div id="userFormArea" class="row">
+            <div class="col-md-6">
+                <form id="userForm">
+                    <div class="form-group">
+                        <label>Enter Username</label>
+                        <input type="Text" class="form-control" id="username"><br>
+                        <input type="submit" class="btn btn-primary" value="Login">
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div id="messageArea" class="row">
+            <div class="col-md-4">
+                <div class="card card-body bg-light">
+                    <h3>Online Users</h3>
+                    <ul class="list-group" id="users"></ul>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="chat" id="chat"></div>
+                    <form id="messageForm">
+                        <div class="form-group">
+                            <div id="status"></div>
+                            <label>Enter Message</label>
+                            <textarea class="form-control" id="message"></textarea><br>
+                            <input type="submit" class="btn btn-primary" value="Send Message">
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(function(){
+            var socket = io.connect();
+            var $messageForm = $('#messageForm');
+            var $message = $('#message');
+            var $chat = $('#chat');
+            var $messageArea = $('#messageArea');
+            var $userFormArea = $('#userFormArea');
+            var $userForm = $('#userForm');
+            var $users = $('#users');
+            var $username = $('#username');
+            var $status = $('#status');
+
+            $messageForm.submit(function(e){
+                e.preventDefault();
+                socket.emit('send message', $message.val());
+                $message.val('');
+            })
+
+            socket.on('new message',function(data){
+                $status.empty();
+                $chat.append('<div class="card card-body bg-light"><strong>'+data.user+'</strong> ' +data.msg+ '</div>');
+                
+                
+            })
+
+            $userForm.submit(function(e){
+                e.preventDefault();
+                socket.emit('new user', $username.val(), function(data){
+                    if(data){
+                        $userFormArea.hide();
+                        $messageArea.show();
+                    }
+                });
+                $username.val('');
+            })
+
+            socket.on('get users', function(data){
+                var html = '';
+                for(i=0; i<data.length; i++){
+                    html += '<li class="list-group-item">'+data[i]+'</li>';
+                }
+                $users.html(html);
+
+            });
+
+            $message.on('focus',function(){
+                
+                socket.emit('typing', $username.val);
+            })
+
+            socket.on('typing',function(data){
+                $status.append('<p><em>' + data.user + '  is typing ....</em></p>');
+            })
+        })
+    </script>
+  </body>
+</html>
